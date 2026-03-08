@@ -1,45 +1,182 @@
-# learn-ktor
+# Diff as a Service
 
-This project was created using the [Ktor Project Generator](https://start.ktor.io).
+A Kotlin/Ktor API to manage image comparison runs and serve generated artifacts.
 
-Here are some useful links to get you started:
+The service lets you:
+- create projects
+- upload source assets (PDFs)
+- create comparisons between two assets
+- queue runs
+- execute `visualdiff` in a background worker
+- access run status and generated artifacts (`report.html`, `diff.json`, images)
 
-- [Ktor Documentation](https://ktor.io/docs/home.html)
-- [Ktor GitHub page](https://github.com/ktorio/ktor)
-- The [Ktor Slack chat](https://app.slack.com/client/T09229ZC6/C0A974TJ9). You'll need to [request an invite](https://surveys.jetbrains.com/s3/kotlin-slack-sign-up) to join.
+## Tech stack
 
-## Features
+- Kotlin `2.3.10`
+- Ktor `3.4.0`
+- Exposed + PostgreSQL
+- Docker / Docker Compose
 
-Here's a list of features included in this project:
+## Visual Diff JAR source
 
-| Name                                                                   | Description                                                                        |
-| ------------------------------------------------------------------------|------------------------------------------------------------------------------------ |
-| [Koin](https://start.ktor.io/p/koin)                                   | Provides dependency injection                                                      |
-| [Routing](https://start.ktor.io/p/routing)                             | Provides a structured routing DSL                                                  |
-| [kotlinx.serialization](https://start.ktor.io/p/kotlinx-serialization) | Handles JSON serialization using kotlinx.serialization library                     |
-| [Content Negotiation](https://start.ktor.io/p/content-negotiation)     | Provides automatic content conversion according to Content-Type and Accept headers |
-| [Postgres](https://start.ktor.io/p/postgres)                           | Adds Postgres database to your application                                         |
-| [Exposed](https://start.ktor.io/p/exposed)                             | Adds Exposed database to your application                                          |
-| [GSON](https://start.ktor.io/p/ktor-gson)                              | Handles JSON serialization using GSON library                                      |
+This repository includes `server/visualdiff/visualdiff.jar` for local and container execution.
+The JAR comes from https://github.com/kazuma007/visual-diff/tree/main
 
-## Building & Running
+## Prerequisites
 
-To build or run the project, use one of the following tasks:
+- Docker + Docker Compose, or
+- JDK 21 + PostgreSQL (if running outside Docker)
 
-| Task                                    | Description                                                          |
-| -----------------------------------------|---------------------------------------------------------------------- |
-| `./gradlew test`                        | Run the tests                                                        |
-| `./gradlew build`                       | Build everything                                                     |
-| `./gradlew buildFatJar`                 | Build an executable JAR of the server with all dependencies included |
-| `./gradlew buildImage`                  | Build the docker image to use with the fat JAR                       |
-| `./gradlew publishImageToLocalRegistry` | Publish the docker image locally                                     |
-| `./gradlew run`                         | Run the server                                                       |
-| `./gradlew runDocker`                   | Run using the local docker image                                     |
+## Environment variables
 
-If the server starts successfully, you'll see the following output:
+- `DB_URL`
+- `DB_USER`
+- `DB_PASSWORD`
+- `DATA_DIR` (default: `/data`)
+- `VISUAL_DIFF_CMD` (default: `java -jar ./visualdiff/visualdiff.jar`)
+- `PORT` (default: `8080`)
 
+## Build
+
+From `server/`:
+
+```bash
+./gradlew clean build
 ```
-2024-12-04 14:32:45.584 [main] INFO  Application - Application started in 0.303 seconds.
-2024-12-04 14:32:45.682 [main] INFO  Application - Responding at http://0.0.0.0:8080
+
+Build fat jar:
+
+```bash
+./gradlew clean buildFatJar
 ```
 
+## Run
+
+### Option 1: Docker Compose (recommended)
+
+From repository root:
+
+```bash
+docker compose -f compose.yml up --build
+```
+
+API base URL:
+
+```text
+http://localhost:8080/api
+```
+
+### Option 2: Local Gradle run
+
+1) Start PostgreSQL and set env vars.
+2) Run API from `server/`:
+
+```bash
+./gradlew run
+```
+
+## Test
+
+Run unit/integration tests:
+
+```bash
+cd server
+./gradlew test
+```
+
+Run full API curl scenario and save outputs:
+
+```bash
+./scripts/e2e-save-output.sh
+```
+
+Notes:
+- Requires `jq` (used for reliable JSON parsing).
+- Downloads `report.html` plus all registered artifacts into the output directory, preserving original filenames.
+
+Saved artifacts:
+
+```text
+outputs/e2e-YYYYMMDD-HHMMSS/
+```
+
+## Runtime storage layout
+
+With `DATA_DIR=/data`:
+
+```text
+data/
+  assets/
+  runs/
+    {runId}/
+      report.html
+      diff.json
+      *.png|*.jpg|*.jpeg|*.webp|*.gif
+```
+
+## API endpoints
+
+- `POST /api/projects`
+- `POST /api/projects/{projectId}/assets`
+- `GET /api/assets/{assetId}`
+- `GET /api/assets/{assetId}/download`
+- `POST /api/projects/{projectId}/comparisons`
+- `POST /api/comparisons/{comparisonId}/runs`
+- `GET /api/runs/{runId}`
+- `GET /api/runs/{runId}/artifacts`
+- `GET /api/runs/{runId}/artifacts/{artifactId}`
+- `GET /api/runs/{runId}/report`
+
+## Example API flow (curl)
+
+```bash
+BASE=http://localhost:8080/api
+```
+
+1. Create project
+
+```bash
+curl -s -X POST "$BASE/projects" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"demo"}'
+```
+
+2. Upload old asset
+
+```bash
+curl -s -X POST "$BASE/projects/$PROJECT_ID/assets" \
+  -F 'file=@./example/A.pdf'
+```
+
+3. Upload new asset
+
+```bash
+curl -s -X POST "$BASE/projects/$PROJECT_ID/assets" \
+  -F 'file=@./example/B.pdf'
+```
+
+4. Create comparison
+
+```bash
+curl -s -X POST "$BASE/projects/$PROJECT_ID/comparisons" \
+  -H 'Content-Type: application/json' \
+  -d "{\"oldAssetId\":\"$OLD_ASSET_ID\",\"newAssetId\":\"$NEW_ASSET_ID\"}"
+```
+
+5. Queue run
+
+```bash
+curl -s -X POST "$BASE/comparisons/$COMPARISON_ID/runs"
+```
+
+6. Check run
+
+```bash
+curl -s "$BASE/runs/$RUN_ID"
+```
+
+7. Download report
+
+```bash
+curl -s "$BASE/runs/$RUN_ID/report" -o report.html
+```
