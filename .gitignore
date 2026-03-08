@@ -34,3 +34,7 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# Local runtime files
+.DS_Store
+data/

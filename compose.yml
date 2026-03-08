@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: diffdb
+      POSTGRES_USER: diff
+      POSTGRES_PASSWORD: diff
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U diff -d diffdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/diffdb
+      DB_USER: diff
+      DB_PASSWORD: diff
+      DATA_DIR: /data
+      VISUAL_DIFF_CMD: java -jar /app/visualdiff/visualdiff.jar
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+
+volumes:
+  postgres_data:
