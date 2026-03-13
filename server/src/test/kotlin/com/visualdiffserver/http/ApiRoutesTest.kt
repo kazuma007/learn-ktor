@@ -1,8 +1,8 @@
 package com.visualdiffserver.http
 
 import com.visualdiffserver.config.AppConfig
-import com.visualdiffserver.module
-import com.visualdiffserver.app.AppDependencies
+import com.visualdiffserver.module as appModule
+import com.visualdiffserver.persistence.DiffRepository
 import com.visualdiffserver.support.FakeDiffRepository
 import com.visualdiffserver.storage.StorageService
 import com.visualdiffserver.worker.CommandResult
@@ -23,12 +23,14 @@ import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import org.koin.core.module.Module
+import org.koin.dsl.module
 
 class ApiRoutesTest {
     @Test
     fun createProjectReturnsCreated() = testApplication {
-        val dependencies = testDependencies()
-        application { module(dependencies) }
+        val testModule = testModule()
+        application { appModule(initializeDatabase = false, rootModule = testModule) }
 
         val response = client.post("/api/projects") {
             contentType(ContentType.Application.Json)
@@ -41,8 +43,8 @@ class ApiRoutesTest {
 
     @Test
     fun uploadAssetAndFetchMetadata() = testApplication {
-        val dependencies = testDependencies()
-        application { module(dependencies) }
+        val testModule = testModule()
+        application { appModule(initializeDatabase = false, rootModule = testModule) }
 
         val projectResponse = client.post("/api/projects") {
             contentType(ContentType.Application.Json)
@@ -79,7 +81,7 @@ class ApiRoutesTest {
         assertEquals("hello-pdf", downloadResponse.bodyAsText())
     }
 
-    private fun testDependencies(): AppDependencies {
+    private fun testModule(): Module {
         val config = AppConfig(
             dbUrl = "jdbc:postgresql://unused",
             dbUser = "unused",
@@ -89,17 +91,18 @@ class ApiRoutesTest {
             runsDir = createTempDirectory("api-test-runs"),
             visualDiffCmd = "echo",
         )
-        return AppDependencies(
-            config = config,
-            storage = StorageService(config),
-            repository = FakeDiffRepository(),
-            visualDiffRunner = object : VisualDiffRunner {
-                override fun run(baseCommand: String, oldFile: String, newFile: String, outputDir: java.nio.file.Path): CommandResult {
-                    return CommandResult(exitCode = 0, stdout = "", stderr = "")
+        return module {
+            single { config }
+            single { StorageService(get()) }
+            single<DiffRepository> { FakeDiffRepository() }
+            single<VisualDiffRunner> {
+                object : VisualDiffRunner {
+                    override fun run(baseCommand: String, oldFile: String, newFile: String, outputDir: java.nio.file.Path): CommandResult {
+                        return CommandResult(exitCode = 0, stdout = "", stderr = "")
+                    }
                 }
-            },
-            initializeDatabase = false,
-        )
+            }
+        }
     }
 
     private fun extractField(json: String, field: String): String {

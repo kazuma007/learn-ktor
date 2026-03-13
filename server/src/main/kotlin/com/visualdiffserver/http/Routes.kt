@@ -21,11 +21,12 @@ import io.ktor.server.routing.routing
 import io.ktor.utils.io.jvm.javaio.toInputStream
 import java.nio.file.Files
 import java.util.UUID
+import org.koin.ktor.ext.inject
 
-fun Application.configureRouting(
-    repository: DiffRepository,
-    storage: StorageService,
-) {
+fun Application.configureRouting() {
+    val repository by inject<DiffRepository>()
+    val storage by inject<StorageService>()
+
     routing {
         route("/api") {
             post("/projects") {
