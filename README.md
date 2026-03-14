@@ -83,6 +83,26 @@ Run unit/integration tests:
 ./gradlew test
 ```
 
+## Format
+
+Format Kotlin and Gradle Kotlin script sources:
+
+```bash
+./gradlew ktfmtFormat
+```
+
+Verify formatting without changing files:
+
+```bash
+./gradlew ktfmtCheck
+```
+
+The standard verification task also includes formatting checks:
+
+```bash
+./gradlew check
+```
+
 Run full API curl scenario and save outputs:
 
 ```bash
