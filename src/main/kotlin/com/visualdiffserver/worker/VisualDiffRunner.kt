@@ -12,18 +12,20 @@ interface VisualDiffRunner {
     fun run(baseCommand: String, oldFile: String, newFile: String, outputDir: Path): CommandResult
 }
 
-data class CommandResult(
-    val exitCode: Int,
-    val stdout: String,
-    val stderr: String,
-)
+data class CommandResult(val exitCode: Int, val stdout: String, val stderr: String)
 
 class ShellVisualDiffRunner : VisualDiffRunner {
-    override fun run(baseCommand: String, oldFile: String, newFile: String, outputDir: Path): CommandResult {
+    override fun run(
+        baseCommand: String,
+        oldFile: String,
+        newFile: String,
+        outputDir: Path,
+    ): CommandResult {
         val command = buildCommand(baseCommand, oldFile, newFile, outputDir)
-        val process = ProcessBuilder("sh", "-c", command)
-            .directory(File(System.getProperty("user.dir")))
-            .start()
+        val process =
+            ProcessBuilder("sh", "-c", command)
+                .directory(File(System.getProperty("user.dir")))
+                .start()
 
         val stdoutCapture = captureStream(process.inputStream)
         val stderrCapture = captureStream(process.errorStream)
@@ -36,7 +38,12 @@ class ShellVisualDiffRunner : VisualDiffRunner {
         )
     }
 
-    private fun buildCommand(base: String, oldFile: String, newFile: String, outputDir: Path): String {
+    private fun buildCommand(
+        base: String,
+        oldFile: String,
+        newFile: String,
+        outputDir: Path,
+    ): String {
         return "$base --old-file ${shellEscape(oldFile)} --new-file ${shellEscape(newFile)} --out ${shellEscape(outputDir.toString())}"
     }
 

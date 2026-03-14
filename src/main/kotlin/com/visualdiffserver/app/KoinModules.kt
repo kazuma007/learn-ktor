@@ -1,7 +1,6 @@
 package com.visualdiffserver.app
 
 import com.visualdiffserver.config.AppConfig
-import com.visualdiffserver.app.DiffService
 import com.visualdiffserver.persistence.DiffRepository
 import com.visualdiffserver.persistence.ExposedDiffRepository
 import com.visualdiffserver.storage.StorageService

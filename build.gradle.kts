@@ -1,19 +1,21 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.ktor)
+    alias(libs.plugins.ktfmt.gradle)
     alias(libs.plugins.kotlin.plugin.serialization)
 }
 
 group = "com.visualdiffserver"
+
 version = "0.0.1"
 
-application {
-    mainClass = "io.ktor.server.netty.EngineMain"
-}
+application { mainClass = "io.ktor.server.netty.EngineMain" }
 
-kotlin {
-    jvmToolchain(21)
-}
+kotlin { jvmToolchain(21) }
+
+ktfmt { kotlinLangStyle() }
+
+tasks.check { dependsOn(tasks.named("ktfmtCheck")) }
 
 dependencies {
     implementation(libs.ktor.server.core)

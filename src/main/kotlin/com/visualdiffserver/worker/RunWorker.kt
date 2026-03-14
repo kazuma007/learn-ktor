@@ -27,17 +27,18 @@ class RunWorker(
     fun start() {
         if (workerJob?.isActive == true) return
 
-        workerJob = scope.launch {
-            logger.info("Run worker started")
-            while (isActive) {
-                try {
-                    processNextRunOnce()
-                } catch (e: Exception) {
-                    logger.error("Run worker loop failed", e)
+        workerJob =
+            scope.launch {
+                logger.info("Run worker started")
+                while (isActive) {
+                    try {
+                        processNextRunOnce()
+                    } catch (e: Exception) {
+                        logger.error("Run worker loop failed", e)
+                    }
+                    delay(POLL_INTERVAL_MS)
                 }
-                delay(POLL_INTERVAL_MS)
             }
-        }
     }
 
     fun stop() {
@@ -52,12 +53,13 @@ class RunWorker(
         logger.info("Processing run {}", job.runId)
 
         try {
-            val result = visualDiffRunner.run(
-                baseCommand = config.visualDiffCmd,
-                oldFile = job.oldFilePath,
-                newFile = job.newFilePath,
-                outputDir = outputDir,
-            )
+            val result =
+                visualDiffRunner.run(
+                    baseCommand = config.visualDiffCmd,
+                    oldFile = job.oldFilePath,
+                    newFile = job.newFilePath,
+                    outputDir = outputDir,
+                )
 
             if (result.exitCode != 0) {
                 repository.saveRunResultFailure(

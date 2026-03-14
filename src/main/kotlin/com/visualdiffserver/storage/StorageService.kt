@@ -37,11 +37,7 @@ class StorageService(private val config: AppConfig) {
         val storagePath: String,
     )
 
-    fun storeAsset(
-        originalFilename: String,
-        contentType: String,
-        data: InputStream,
-    ): StoredFile {
+    fun storeAsset(originalFilename: String, contentType: String, data: InputStream): StoredFile {
         val safeName = sanitizeFilename(originalFilename)
         val targetName = "${UUID.randomUUID()}_$safeName"
         val target = config.assetsDir.resolve(targetName)
@@ -82,12 +78,14 @@ class StorageService(private val config: AppConfig) {
 
         val artifacts = mutableListOf<ScannedArtifact>()
         return Files.walk(outputDir).use { stream ->
-            stream.filter { Files.isRegularFile(it) }.forEach { file ->
-                val artifact = toArtifact(file)
-                if (artifact != null) {
-                    artifacts.add(artifact)
+            stream
+                .filter { Files.isRegularFile(it) }
+                .forEach { file ->
+                    val artifact = toArtifact(file)
+                    if (artifact != null) {
+                        artifacts.add(artifact)
+                    }
                 }
-            }
             artifacts
         }
     }
@@ -98,17 +96,21 @@ class StorageService(private val config: AppConfig) {
 
     private fun toArtifact(file: Path): ScannedArtifact? {
         val lower = file.name.lowercase(Locale.ROOT)
-        val (kind, contentType) = when {
-            lower == "report.html" -> ArtifactKind.REPORT_HTML to ContentType.Text.Html.toString()
-            lower == "diff.json" -> ArtifactKind.DIFF_JSON to ContentType.Application.Json.toString()
-            lower.endsWith(".png") -> ArtifactKind.IMAGE to ContentType.Image.PNG.toString()
-            lower.endsWith(".jpg") || lower.endsWith(".jpeg") -> ArtifactKind.IMAGE to ContentType.Image.JPEG.toString()
-            lower.endsWith(".webp") -> ArtifactKind.IMAGE to "image/webp"
-            lower.endsWith(".gif") -> ArtifactKind.IMAGE to ContentType.Image.GIF.toString()
-            lower.endsWith(".css") -> ArtifactKind.STATIC_ASSET to "text/css"
-            lower.endsWith(".js") -> ArtifactKind.STATIC_ASSET to "application/javascript"
-            else -> return null
-        }
+        val (kind, contentType) =
+            when {
+                lower == "report.html" ->
+                    ArtifactKind.REPORT_HTML to ContentType.Text.Html.toString()
+                lower == "diff.json" ->
+                    ArtifactKind.DIFF_JSON to ContentType.Application.Json.toString()
+                lower.endsWith(".png") -> ArtifactKind.IMAGE to ContentType.Image.PNG.toString()
+                lower.endsWith(".jpg") || lower.endsWith(".jpeg") ->
+                    ArtifactKind.IMAGE to ContentType.Image.JPEG.toString()
+                lower.endsWith(".webp") -> ArtifactKind.IMAGE to "image/webp"
+                lower.endsWith(".gif") -> ArtifactKind.IMAGE to ContentType.Image.GIF.toString()
+                lower.endsWith(".css") -> ArtifactKind.STATIC_ASSET to "text/css"
+                lower.endsWith(".js") -> ArtifactKind.STATIC_ASSET to "application/javascript"
+                else -> return null
+            }
 
         return ScannedArtifact(
             kind = kind,
@@ -120,10 +122,7 @@ class StorageService(private val config: AppConfig) {
     }
 
     private fun sanitizeFilename(filename: String): String {
-        return filename
-            .replace(Regex("[^a-zA-Z0-9._-]"), "_")
-            .take(255)
-            .ifBlank { "upload.bin" }
+        return filename.replace(Regex("[^a-zA-Z0-9._-]"), "_").take(255).ifBlank { "upload.bin" }
     }
 
     private fun ByteArray.toHex(): String {
