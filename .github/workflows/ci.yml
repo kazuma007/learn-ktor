@@ -18,9 +18,6 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: server
     steps:
       - name: Check out repository
         uses: actions/checkout@v6.0.2
@@ -47,5 +44,5 @@ jobs:
         with:
           name: test-reports
           path: |
-            server/build/reports/tests/
-            server/build/test-results/
+            build/reports/tests/
+            build/test-results/
