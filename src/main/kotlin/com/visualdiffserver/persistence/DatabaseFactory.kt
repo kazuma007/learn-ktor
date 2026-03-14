@@ -11,12 +11,13 @@ object DatabaseFactory {
     private lateinit var database: Database
 
     fun init(config: AppConfig) {
-        database = Database.connect(
-            url = config.dbUrl,
-            user = config.dbUser,
-            password = config.dbPassword,
-            driver = "org.postgresql.Driver",
-        )
+        database =
+            Database.connect(
+                url = config.dbUrl,
+                user = config.dbUser,
+                password = config.dbPassword,
+                driver = "org.postgresql.Driver",
+            )
 
         transaction(database) {
             SchemaUtils.create(

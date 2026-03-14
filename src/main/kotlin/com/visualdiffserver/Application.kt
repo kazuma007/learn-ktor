@@ -30,9 +30,7 @@ fun Application.module(
     rootModule: Module = productionModule(),
     extraModules: List<Module> = emptyList(),
 ) {
-    install(Koin) {
-        modules(listOf(rootModule) + extraModules)
-    }
+    install(Koin) { modules(listOf(rootModule) + extraModules) }
 
     configureSerialization()
     configureStatusPages()
@@ -47,16 +45,15 @@ fun Application.module(
         DatabaseFactory.init(config)
     }
 
-    val worker = RunWorker(
-        logger = log,
-        config = config,
-        storage = storage,
-        repository = repository,
-        visualDiffRunner = visualDiffRunner,
-    )
+    val worker =
+        RunWorker(
+            logger = log,
+            config = config,
+            storage = storage,
+            repository = repository,
+            visualDiffRunner = visualDiffRunner,
+        )
     worker.start()
 
-    monitor.subscribe(ApplicationStopped) {
-        worker.stop()
-    }
+    monitor.subscribe(ApplicationStopped) { worker.stop() }
 }

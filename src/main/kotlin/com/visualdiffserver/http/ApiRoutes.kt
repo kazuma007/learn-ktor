@@ -45,8 +45,10 @@ fun Application.configureRouting() {
 
                 call.response.headers.append(
                     HttpHeaders.ContentDisposition,
-                    ContentDisposition.Attachment
-                        .withParameter(ContentDisposition.Parameters.FileName, file.filename)
+                    ContentDisposition.Attachment.withParameter(
+                            ContentDisposition.Parameters.FileName,
+                            file.filename,
+                        )
                         .toString(),
                 )
                 call.respondFile(file.path.toFile())
@@ -55,10 +57,12 @@ fun Application.configureRouting() {
             post("/projects/{projectId}/comparisons") {
                 val projectId = call.requireUuidPathParam("projectId")
                 val body = call.receive<CreateComparisonRequest>()
-                val oldAssetId = body.oldAssetId.toUuidOrNull()
-                    ?: throw ApiException(HttpStatusCode.BadRequest, "oldAssetId must be UUID")
-                val newAssetId = body.newAssetId.toUuidOrNull()
-                    ?: throw ApiException(HttpStatusCode.BadRequest, "newAssetId must be UUID")
+                val oldAssetId =
+                    body.oldAssetId.toUuidOrNull()
+                        ?: throw ApiException(HttpStatusCode.BadRequest, "oldAssetId must be UUID")
+                val newAssetId =
+                    body.newAssetId.toUuidOrNull()
+                        ?: throw ApiException(HttpStatusCode.BadRequest, "newAssetId must be UUID")
 
                 val comparison = diffService.createComparison(projectId, oldAssetId, newAssetId)
                 call.respond(HttpStatusCode.Created, comparison)

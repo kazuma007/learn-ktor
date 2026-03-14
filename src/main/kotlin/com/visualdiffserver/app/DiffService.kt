@@ -14,20 +14,14 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
 
-class DiffService(
-    private val repository: DiffRepository,
-    private val storage: StorageService,
-) {
+class DiffService(private val repository: DiffRepository, private val storage: StorageService) {
     data class AssetUpload(
         val originalFilename: String,
         val contentType: String,
         val data: InputStream,
     )
 
-    data class DownloadedFile(
-        val filename: String,
-        val path: Path,
-    )
+    data class DownloadedFile(val filename: String, val path: Path)
 
     suspend fun createProject(name: String): ProjectResponse {
         val normalizedName = name.trim()
@@ -40,11 +34,12 @@ class DiffService(
     suspend fun createAsset(projectId: UUID, upload: AssetUpload): AssetResponse {
         ensureProjectExists(projectId)
 
-        val stored = storage.storeAsset(
-            originalFilename = upload.originalFilename,
-            contentType = upload.contentType,
-            data = upload.data,
-        )
+        val stored =
+            storage.storeAsset(
+                originalFilename = upload.originalFilename,
+                contentType = upload.contentType,
+                data = upload.data,
+            )
         requireNonEmptyUpload(stored.byteSize)
         return repository.createAsset(projectId, stored)
     }
@@ -62,7 +57,11 @@ class DiffService(
         )
     }
 
-    suspend fun createComparison(projectId: UUID, oldAssetId: UUID, newAssetId: UUID): ComparisonResponse {
+    suspend fun createComparison(
+        projectId: UUID,
+        oldAssetId: UUID,
+        newAssetId: UUID,
+    ): ComparisonResponse {
         ensureProjectExists(projectId)
 
         return repository.createComparison(projectId, oldAssetId, newAssetId)
@@ -89,14 +88,16 @@ class DiffService(
     }
 
     suspend fun getArtifactDownload(runId: UUID, artifactId: UUID): Path {
-        val artifact = repository.getArtifact(runId, artifactId)
-            ?: throw ApiException(HttpStatusCode.NotFound, "artifact not found")
+        val artifact =
+            repository.getArtifact(runId, artifactId)
+                ?: throw ApiException(HttpStatusCode.NotFound, "artifact not found")
         return requireExistingFile(artifact.storagePath, "artifact file not found")
     }
 
     suspend fun getReportDownload(runId: UUID): Path {
-        val artifact = repository.getReportArtifact(runId)
-            ?: throw ApiException(HttpStatusCode.NotFound, "report not found")
+        val artifact =
+            repository.getReportArtifact(runId)
+                ?: throw ApiException(HttpStatusCode.NotFound, "report not found")
         return requireExistingFile(artifact.storagePath, "report file not found")
     }
 

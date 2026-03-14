@@ -1,7 +1,7 @@
 package com.visualdiffserver.http.plugins
 
-import com.visualdiffserver.http.ApiException
 import com.visualdiffserver.domain.ErrorResponse
+import com.visualdiffserver.http.ApiException
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.call

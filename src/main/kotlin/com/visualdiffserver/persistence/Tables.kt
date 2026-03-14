@@ -14,7 +14,8 @@ object ProjectsTable : Table("projects") {
 
 object AssetsTable : Table("assets") {
     val id = uuid("id")
-    val projectId = uuid("project_id").references(ProjectsTable.id, onDelete = ReferenceOption.CASCADE)
+    val projectId =
+        uuid("project_id").references(ProjectsTable.id, onDelete = ReferenceOption.CASCADE)
     val filename = text("filename")
     val contentType = text("content_type")
     val byteSize = long("byte_size")
@@ -27,9 +28,12 @@ object AssetsTable : Table("assets") {
 
 object ComparisonsTable : Table("comparisons") {
     val id = uuid("id")
-    val projectId = uuid("project_id").references(ProjectsTable.id, onDelete = ReferenceOption.CASCADE)
-    val oldAssetId = uuid("old_asset_id").references(AssetsTable.id, onDelete = ReferenceOption.RESTRICT)
-    val newAssetId = uuid("new_asset_id").references(AssetsTable.id, onDelete = ReferenceOption.RESTRICT)
+    val projectId =
+        uuid("project_id").references(ProjectsTable.id, onDelete = ReferenceOption.CASCADE)
+    val oldAssetId =
+        uuid("old_asset_id").references(AssetsTable.id, onDelete = ReferenceOption.RESTRICT)
+    val newAssetId =
+        uuid("new_asset_id").references(AssetsTable.id, onDelete = ReferenceOption.RESTRICT)
     val createdAt = timestamp("created_at")
 
     override val primaryKey = PrimaryKey(id)
@@ -37,7 +41,8 @@ object ComparisonsTable : Table("comparisons") {
 
 object RunsTable : Table("runs") {
     val id = uuid("id")
-    val comparisonId = uuid("comparison_id").references(ComparisonsTable.id, onDelete = ReferenceOption.CASCADE)
+    val comparisonId =
+        uuid("comparison_id").references(ComparisonsTable.id, onDelete = ReferenceOption.CASCADE)
     val status = text("status")
     val startedAt = timestamp("started_at").nullable()
     val finishedAt = timestamp("finished_at").nullable()
