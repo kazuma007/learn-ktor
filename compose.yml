@@ -1,4 +1,23 @@
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/diffdb
+      DB_USER: diff
+      DB_PASSWORD: diff
+      DATA_DIR: /data
+      VISUAL_DIFF_CMD: java -jar /app/visualdiff/visualdiff.jar
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - app_data:/data
+
   postgres:
     image: postgres:16
     environment:
@@ -15,22 +34,6 @@ services:
       timeout: 5s
       retries: 10
 
-  api:
-    build:
-      context: ./server
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      DB_URL: jdbc:postgresql://postgres:5432/diffdb
-      DB_USER: diff
-      DB_PASSWORD: diff
-      DATA_DIR: /data
-      VISUAL_DIFF_CMD: java -jar /app/visualdiff/visualdiff.jar
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./data:/data
-
 volumes:
+  app_data:
   postgres_data:

@@ -19,7 +19,7 @@ The service lets you:
 
 ## Visual Diff JAR source
 
-This repository includes `server/visualdiff/visualdiff.jar` for local and container execution.
+This repository includes `visualdiff/visualdiff.jar` for local and container execution.
 The JAR comes from https://github.com/kazuma007/visual-diff/tree/main
 
 ## Prerequisites
@@ -32,13 +32,13 @@ The JAR comes from https://github.com/kazuma007/visual-diff/tree/main
 - `DB_URL`
 - `DB_USER`
 - `DB_PASSWORD`
-- `DATA_DIR` (default: `/data`)
-- `VISUAL_DIFF_CMD` (default: `java -jar ./visualdiff/visualdiff.jar`)
+- `DATA_DIR` (default for local runs: `./data`; Docker Compose sets `/data`)
+- `VISUAL_DIFF_CMD` (default for local runs: `java -jar ./visualdiff/visualdiff.jar`; Docker Compose sets `/app/visualdiff/visualdiff.jar`)
 - `PORT` (default: `8080`)
 
 ## Build
 
-From `server/`:
+From repository root:
 
 ```bash
 ./gradlew clean build
@@ -57,7 +57,7 @@ Build fat jar:
 From repository root:
 
 ```bash
-docker compose -f compose.yml up --build
+docker compose up --build
 ```
 
 API base URL:
@@ -69,7 +69,7 @@ http://localhost:8080/api
 ### Option 2: Local Gradle run
 
 1) Start PostgreSQL and set env vars.
-2) Run API from `server/`:
+2) Run API from repository root:
 
 ```bash
 ./gradlew run
@@ -80,7 +80,6 @@ http://localhost:8080/api
 Run unit/integration tests:
 
 ```bash
-cd server
 ./gradlew test
 ```
 
@@ -98,6 +97,29 @@ Saved artifacts:
 
 ```text
 outputs/e2e-YYYYMMDD-HHMMSS/
+```
+
+## Repository layout
+
+```text
+.
+|-- src/main/kotlin/com/visualdiffserver
+|   |-- app/          # service wiring
+|   |-- config/       # environment and path resolution
+|   |-- domain/       # API DTOs and enums
+|   |-- http/         # routes, request parsing, error handling
+|   |-- persistence/  # Exposed repository and schema
+|   |-- storage/      # filesystem operations
+|   `-- worker/       # background run processing
+|-- src/test/kotlin/com/visualdiffserver
+|   |-- app/
+|   |-- config/
+|   |-- http/
+|   |-- support/
+|   `-- worker/
+|-- visualdiff/
+|-- example/
+`-- scripts/
 ```
 
 ## Runtime storage layout

@@ -38,3 +38,4 @@ out/
 # Local runtime files
 .DS_Store
 data/
+outputs/
