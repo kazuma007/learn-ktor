@@ -5,9 +5,11 @@ import com.visualdiffserver.domain.ArtifactKind
 import com.visualdiffserver.domain.Asset
 import com.visualdiffserver.domain.Comparison
 import com.visualdiffserver.domain.DiffRepository
+import com.visualdiffserver.domain.NewAsset
 import com.visualdiffserver.domain.Project
 import com.visualdiffserver.domain.QueuedRunWork
 import com.visualdiffserver.domain.Run
+import com.visualdiffserver.domain.RunQueueRepository
 import com.visualdiffserver.domain.RunStatus
 import com.visualdiffserver.infrastructure.db.DatabaseFactory
 import com.visualdiffserver.infrastructure.db.mapper.toArtifact
@@ -30,7 +32,7 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.update
 
-class ExposedDiffRepository : DiffRepository {
+class ExposedDiffRepository : DiffRepository, RunQueueRepository {
     override suspend fun createProject(name: String): Project =
         DatabaseFactory.query {
             val id = UUID.randomUUID()
@@ -40,7 +42,7 @@ class ExposedDiffRepository : DiffRepository {
                 it[ProjectsTable.name] = name
                 it[createdAt] = now
             }
-            Project(id.toString(), name, now.toString())
+            newProject(id = id, name = name, createdAt = now)
         }
 
     override suspend fun projectExists(projectId: UUID): Boolean =
@@ -48,30 +50,21 @@ class ExposedDiffRepository : DiffRepository {
             ProjectsTable.selectAll().where { ProjectsTable.id eq projectId }.limit(1).any()
         }
 
-    override suspend fun createAsset(projectId: UUID, stored: StorageService.StoredFile): Asset =
+    override suspend fun createAsset(projectId: UUID, newAsset: NewAsset): Asset =
         DatabaseFactory.query {
             val id = UUID.randomUUID()
             val now = Instant.now()
             AssetsTable.insert {
                 it[AssetsTable.id] = id
                 it[AssetsTable.projectId] = projectId
-                it[filename] = stored.filename
-                it[contentType] = stored.contentType
-                it[byteSize] = stored.byteSize
-                it[sha256] = stored.sha256
-                it[storagePath] = stored.storagePath
+                it[filename] = newAsset.filename
+                it[contentType] = newAsset.contentType
+                it[byteSize] = newAsset.byteSize
+                it[sha256] = newAsset.sha256
+                it[storagePath] = newAsset.storagePath
                 it[createdAt] = now
             }
-            Asset(
-                id = id.toString(),
-                projectId = projectId.toString(),
-                filename = stored.filename,
-                contentType = stored.contentType,
-                byteSize = stored.byteSize,
-                sha256 = stored.sha256,
-                storagePath = stored.storagePath,
-                createdAt = now.toString(),
-            )
+            newAsset(id = id, projectId = projectId, newAsset = newAsset, createdAt = now)
         }
 
     override suspend fun getAsset(assetId: UUID): Asset? =
@@ -115,13 +108,7 @@ class ExposedDiffRepository : DiffRepository {
                 it[ComparisonsTable.newAssetId] = newAssetId
                 it[createdAt] = now
             }
-            Comparison(
-                id = id.toString(),
-                projectId = projectId.toString(),
-                oldAssetId = oldAssetId.toString(),
-                newAssetId = newAssetId.toString(),
-                createdAt = now.toString(),
-            )
+            newComparison(id, projectId, oldAssetId, newAssetId, now)
         }
 
     override suspend fun getComparison(comparisonId: UUID): Comparison? =
@@ -144,19 +131,7 @@ class ExposedDiffRepository : DiffRepository {
                 it[createdAt] = now
             }
 
-            Run(
-                id = runId.toString(),
-                comparisonId = comparisonId.toString(),
-                status = RunStatus.QUEUED.name,
-                startedAt = null,
-                finishedAt = null,
-                exitCode = null,
-                stdout = null,
-                stderr = null,
-                errorText = null,
-                outputDir = outputDir,
-                createdAt = now.toString(),
-            )
+            newQueuedRun(runId, comparisonId, outputDir, now)
         }
 
     override suspend fun getRun(runId: UUID): Run? =
@@ -296,4 +271,54 @@ class ExposedDiffRepository : DiffRepository {
             }
         }
     }
+
+    private fun newProject(id: UUID, name: String, createdAt: Instant): Project =
+        Project(id = id, name = name, createdAt = createdAt)
+
+    private fun newAsset(id: UUID, projectId: UUID, newAsset: NewAsset, createdAt: Instant): Asset =
+        Asset(
+            id = id,
+            projectId = projectId,
+            filename = newAsset.filename,
+            contentType = newAsset.contentType,
+            byteSize = newAsset.byteSize,
+            sha256 = newAsset.sha256,
+            storagePath = newAsset.storagePath,
+            createdAt = createdAt,
+        )
+
+    private fun newComparison(
+        id: UUID,
+        projectId: UUID,
+        oldAssetId: UUID,
+        newAssetId: UUID,
+        createdAt: Instant,
+    ): Comparison =
+        Comparison(
+            id = id,
+            projectId = projectId,
+            oldAssetId = oldAssetId,
+            newAssetId = newAssetId,
+            createdAt = createdAt,
+        )
+
+    private fun newQueuedRun(
+        runId: UUID,
+        comparisonId: UUID,
+        outputDir: String,
+        createdAt: Instant,
+    ): Run =
+        Run(
+            id = runId,
+            comparisonId = comparisonId,
+            status = RunStatus.QUEUED.name,
+            startedAt = null,
+            finishedAt = null,
+            exitCode = null,
+            stdout = null,
+            stderr = null,
+            errorText = null,
+            outputDir = outputDir,
+            createdAt = createdAt,
+        )
 }

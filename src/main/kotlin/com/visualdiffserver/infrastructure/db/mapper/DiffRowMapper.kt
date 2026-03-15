@@ -12,48 +12,48 @@ import org.jetbrains.exposed.sql.ResultRow
 
 fun ResultRow.toAsset(): Asset =
     Asset(
-        id = this[AssetsTable.id].toString(),
-        projectId = this[AssetsTable.projectId].toString(),
+        id = this[AssetsTable.id],
+        projectId = this[AssetsTable.projectId],
         filename = this[AssetsTable.filename],
         contentType = this[AssetsTable.contentType],
         byteSize = this[AssetsTable.byteSize],
         sha256 = this[AssetsTable.sha256],
         storagePath = this[AssetsTable.storagePath],
-        createdAt = this[AssetsTable.createdAt].toString(),
+        createdAt = this[AssetsTable.createdAt],
     )
 
 fun ResultRow.toComparison(): Comparison =
     Comparison(
-        id = this[ComparisonsTable.id].toString(),
-        projectId = this[ComparisonsTable.projectId].toString(),
-        oldAssetId = this[ComparisonsTable.oldAssetId].toString(),
-        newAssetId = this[ComparisonsTable.newAssetId].toString(),
-        createdAt = this[ComparisonsTable.createdAt].toString(),
+        id = this[ComparisonsTable.id],
+        projectId = this[ComparisonsTable.projectId],
+        oldAssetId = this[ComparisonsTable.oldAssetId],
+        newAssetId = this[ComparisonsTable.newAssetId],
+        createdAt = this[ComparisonsTable.createdAt],
     )
 
 fun ResultRow.toRun(): Run =
     Run(
-        id = this[RunsTable.id].toString(),
-        comparisonId = this[RunsTable.comparisonId].toString(),
+        id = this[RunsTable.id],
+        comparisonId = this[RunsTable.comparisonId],
         status = this[RunsTable.status],
-        startedAt = this[RunsTable.startedAt]?.toString(),
-        finishedAt = this[RunsTable.finishedAt]?.toString(),
+        startedAt = this[RunsTable.startedAt],
+        finishedAt = this[RunsTable.finishedAt],
         exitCode = this[RunsTable.exitCode],
         stdout = this[RunsTable.stdout],
         stderr = this[RunsTable.stderr],
         errorText = this[RunsTable.errorText],
         outputDir = this[RunsTable.outputDir],
-        createdAt = this[RunsTable.createdAt].toString(),
+        createdAt = this[RunsTable.createdAt],
     )
 
 fun ResultRow.toArtifact(): Artifact =
     Artifact(
-        id = this[ArtifactsTable.id].toString(),
-        runId = this[ArtifactsTable.runId].toString(),
+        id = this[ArtifactsTable.id],
+        runId = this[ArtifactsTable.runId],
         kind = this[ArtifactsTable.kind],
         filename = this[ArtifactsTable.filename],
         contentType = this[ArtifactsTable.contentType],
         byteSize = this[ArtifactsTable.byteSize],
         storagePath = this[ArtifactsTable.storagePath],
-        createdAt = this[ArtifactsTable.createdAt].toString(),
+        createdAt = this[ArtifactsTable.createdAt],
     )

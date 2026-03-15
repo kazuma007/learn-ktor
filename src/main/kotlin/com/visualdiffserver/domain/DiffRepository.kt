@@ -1,6 +1,5 @@
 package com.visualdiffserver.domain
 
-import com.visualdiffserver.storage.StorageService
 import java.util.UUID
 
 interface DiffRepository {
@@ -8,7 +7,7 @@ interface DiffRepository {
 
     suspend fun projectExists(projectId: UUID): Boolean
 
-    suspend fun createAsset(projectId: UUID, stored: StorageService.StoredFile): Asset
+    suspend fun createAsset(projectId: UUID, newAsset: NewAsset): Asset
 
     suspend fun getAsset(assetId: UUID): Asset?
 
@@ -25,24 +24,6 @@ interface DiffRepository {
     suspend fun getArtifact(runId: UUID, artifactId: UUID): Artifact?
 
     suspend fun getReportArtifact(runId: UUID): Artifact?
-
-    suspend fun claimNextQueuedRun(): QueuedRunWork?
-
-    suspend fun saveRunResultSuccess(
-        runId: UUID,
-        exitCode: Int,
-        stdoutText: String,
-        stderrText: String,
-        artifacts: List<StorageService.ScannedArtifact>,
-    )
-
-    suspend fun saveRunResultFailure(
-        runId: UUID,
-        exitCode: Int?,
-        stdoutText: String?,
-        stderrText: String?,
-        errorText: String,
-    )
 }
 
 data class QueuedRunWork(

@@ -3,6 +3,7 @@ package com.visualdiffserver.routes
 import com.visualdiffserver.application.DiffService
 import com.visualdiffserver.config.AppConfig
 import com.visualdiffserver.domain.DiffRepository
+import com.visualdiffserver.domain.RunQueueRepository
 import com.visualdiffserver.module as appModule
 import com.visualdiffserver.storage.StorageService
 import com.visualdiffserver.support.FakeDiffRepository
@@ -210,7 +211,9 @@ class ApiRoutesTest {
         return module {
             single { config }
             single { StorageService(get()) }
-            single<DiffRepository> { FakeDiffRepository() }
+            single { FakeDiffRepository() }
+            single<DiffRepository> { get<FakeDiffRepository>() }
+            single<RunQueueRepository> { get<FakeDiffRepository>() }
             single { DiffService(get(), get()) }
             single<VisualDiffRunner> {
                 object : VisualDiffRunner {

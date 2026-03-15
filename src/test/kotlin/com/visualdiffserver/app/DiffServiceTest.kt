@@ -1,6 +1,7 @@
 package com.visualdiffserver.application
 
 import com.visualdiffserver.config.AppConfig
+import com.visualdiffserver.domain.NewAsset
 import com.visualdiffserver.routes.ApiException
 import com.visualdiffserver.storage.StorageService
 import com.visualdiffserver.support.FakeDiffRepository
@@ -49,26 +50,26 @@ class DiffServiceTest {
         val fixture = testFixture()
         val projectOne = fixture.repository.createProject("one")
         val projectTwo = fixture.repository.createProject("two")
-        val projectOneId = UUID.fromString(projectOne.id)
-        val projectTwoId = UUID.fromString(projectTwo.id)
+        val projectOneId = projectOne.id
+        val projectTwoId = projectTwo.id
 
         val oldAsset =
             fixture.repository.createAsset(
                 projectOneId,
-                StorageService.StoredFile("old.pdf", "application/pdf", 1, "old", "/tmp/old.pdf"),
+                NewAsset("old.pdf", "application/pdf", 1, "old", "/tmp/old.pdf"),
             )
         val newAsset =
             fixture.repository.createAsset(
                 projectTwoId,
-                StorageService.StoredFile("new.pdf", "application/pdf", 1, "new", "/tmp/new.pdf"),
+                NewAsset("new.pdf", "application/pdf", 1, "new", "/tmp/new.pdf"),
             )
 
         val error =
             assertFailsWith<ApiException> {
                 fixture.service.createComparison(
                     projectId = projectOneId,
-                    oldAssetId = UUID.fromString(oldAsset.id),
-                    newAssetId = UUID.fromString(newAsset.id),
+                    oldAssetId = oldAsset.id,
+                    newAssetId = newAsset.id,
                 )
             }
 
@@ -79,23 +80,14 @@ class DiffServiceTest {
     fun getAssetDownloadRejectsMissingStoredFile() = runBlocking {
         val fixture = testFixture()
         val project = fixture.repository.createProject("demo")
-        val projectId = UUID.fromString(project.id)
+        val projectId = project.id
         val asset =
             fixture.repository.createAsset(
                 projectId,
-                StorageService.StoredFile(
-                    "missing.pdf",
-                    "application/pdf",
-                    1,
-                    "sha",
-                    "/tmp/definitely-missing.pdf",
-                ),
+                NewAsset("missing.pdf", "application/pdf", 1, "sha", "/tmp/definitely-missing.pdf"),
             )
 
-        val error =
-            assertFailsWith<ApiException> {
-                fixture.service.getAssetDownload(UUID.fromString(asset.id))
-            }
+        val error = assertFailsWith<ApiException> { fixture.service.getAssetDownload(asset.id) }
 
         assertEquals("stored file not found", error.message)
     }
@@ -104,7 +96,7 @@ class DiffServiceTest {
     fun createRunCreatesOutputDirectoryInsideConfiguredRunsDir() = runBlocking {
         val fixture = testFixture()
         val project = fixture.repository.createProject("demo")
-        val projectId = UUID.fromString(project.id)
+        val projectId = project.id
 
         val oldAsset =
             fixture.service.createAsset(
@@ -127,11 +119,11 @@ class DiffServiceTest {
         val comparison =
             fixture.service.createComparison(
                 projectId = projectId,
-                oldAssetId = UUID.fromString(oldAsset.id),
-                newAssetId = UUID.fromString(newAsset.id),
+                oldAssetId = oldAsset.id,
+                newAssetId = newAsset.id,
             )
 
-        val run = fixture.service.createRun(UUID.fromString(comparison.id))
+        val run = fixture.service.createRun(comparison.id)
 
         assertTrue(run.outputDir.startsWith(fixture.config.runsDir.toAbsolutePath().toString()))
     }

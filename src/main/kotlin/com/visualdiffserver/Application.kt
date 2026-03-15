@@ -2,7 +2,7 @@ package com.visualdiffserver
 
 import com.visualdiffserver.application.productionModule
 import com.visualdiffserver.config.AppConfig
-import com.visualdiffserver.domain.DiffRepository
+import com.visualdiffserver.domain.RunQueueRepository
 import com.visualdiffserver.plugins.configureDatabase
 import com.visualdiffserver.plugins.configureRouting
 import com.visualdiffserver.plugins.configureSerialization
@@ -41,7 +41,7 @@ fun Application.module(
 
     val config by inject<AppConfig>()
     val storage by inject<StorageService>()
-    val repository by inject<DiffRepository>()
+    val repository by inject<RunQueueRepository>()
     val visualDiffRunner by inject<VisualDiffRunner>()
 
     val worker =

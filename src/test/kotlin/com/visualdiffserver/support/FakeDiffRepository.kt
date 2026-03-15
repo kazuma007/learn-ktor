@@ -5,15 +5,17 @@ import com.visualdiffserver.domain.ArtifactKind
 import com.visualdiffserver.domain.Asset
 import com.visualdiffserver.domain.Comparison
 import com.visualdiffserver.domain.DiffRepository
+import com.visualdiffserver.domain.NewAsset
 import com.visualdiffserver.domain.Project
 import com.visualdiffserver.domain.QueuedRunWork
 import com.visualdiffserver.domain.Run
+import com.visualdiffserver.domain.RunQueueRepository
 import com.visualdiffserver.domain.RunStatus
 import com.visualdiffserver.storage.StorageService
 import java.time.Instant
 import java.util.UUID
 
-class FakeDiffRepository : DiffRepository {
+class FakeDiffRepository : DiffRepository, RunQueueRepository {
     private val projects = mutableMapOf<UUID, Project>()
     private val assets = mutableMapOf<UUID, Asset>()
     private val comparisons = mutableMapOf<UUID, Comparison>()
@@ -22,24 +24,24 @@ class FakeDiffRepository : DiffRepository {
     private val queuedRuns = ArrayDeque<QueuedRunWork>()
 
     override suspend fun createProject(name: String): Project {
-        val now = Instant.now().toString()
+        val now = Instant.now()
         val id = UUID.randomUUID()
-        return Project(id = id.toString(), name = name, createdAt = now).also { projects[id] = it }
+        return Project(id = id, name = name, createdAt = now).also { projects[id] = it }
     }
 
     override suspend fun projectExists(projectId: UUID): Boolean = projects.containsKey(projectId)
 
-    override suspend fun createAsset(projectId: UUID, stored: StorageService.StoredFile): Asset {
-        val now = Instant.now().toString()
+    override suspend fun createAsset(projectId: UUID, newAsset: NewAsset): Asset {
+        val now = Instant.now()
         val id = UUID.randomUUID()
         return Asset(
-                id = id.toString(),
-                projectId = projectId.toString(),
-                filename = stored.filename,
-                contentType = stored.contentType,
-                byteSize = stored.byteSize,
-                sha256 = stored.sha256,
-                storagePath = stored.storagePath,
+                id = id,
+                projectId = projectId,
+                filename = newAsset.filename,
+                contentType = newAsset.contentType,
+                byteSize = newAsset.byteSize,
+                sha256 = newAsset.sha256,
+                storagePath = newAsset.storagePath,
                 createdAt = now,
             )
             .also { assets[id] = it }
@@ -54,18 +56,15 @@ class FakeDiffRepository : DiffRepository {
     ): Comparison? {
         val oldAsset = assets[oldAssetId] ?: return null
         val newAsset = assets[newAssetId] ?: return null
-        if (
-            oldAsset.projectId != projectId.toString() || newAsset.projectId != projectId.toString()
-        )
-            return null
+        if (oldAsset.projectId != projectId || newAsset.projectId != projectId) return null
 
-        val now = Instant.now().toString()
+        val now = Instant.now()
         val id = UUID.randomUUID()
         return Comparison(
-                id = id.toString(),
-                projectId = projectId.toString(),
-                oldAssetId = oldAssetId.toString(),
-                newAssetId = newAssetId.toString(),
+                id = id,
+                projectId = projectId,
+                oldAssetId = oldAssetId,
+                newAssetId = newAssetId,
                 createdAt = now,
             )
             .also { comparisons[id] = it }
@@ -74,10 +73,10 @@ class FakeDiffRepository : DiffRepository {
     override suspend fun getComparison(comparisonId: UUID): Comparison? = comparisons[comparisonId]
 
     override suspend fun createRun(runId: UUID, comparisonId: UUID, outputDir: String): Run {
-        val now = Instant.now().toString()
+        val now = Instant.now()
         return Run(
-                id = runId.toString(),
-                comparisonId = comparisonId.toString(),
+                id = runId,
+                comparisonId = comparisonId,
                 status = RunStatus.QUEUED.name,
                 startedAt = null,
                 finishedAt = null,
@@ -97,7 +96,7 @@ class FakeDiffRepository : DiffRepository {
         artifacts[runId]?.sortedBy { it.filename }.orEmpty()
 
     override suspend fun getArtifact(runId: UUID, artifactId: UUID): Artifact? {
-        return artifacts[runId]?.firstOrNull { it.id == artifactId.toString() }
+        return artifacts[runId]?.firstOrNull { it.id == artifactId }
     }
 
     override suspend fun getReportArtifact(runId: UUID): Artifact? {
@@ -108,8 +107,7 @@ class FakeDiffRepository : DiffRepository {
         val job = queuedRuns.removeFirstOrNull() ?: return null
         val runId = job.runId
         val current = runs[runId] ?: return null
-        runs[runId] =
-            current.copy(status = RunStatus.RUNNING.name, startedAt = Instant.now().toString())
+        runs[runId] = current.copy(status = RunStatus.RUNNING.name, startedAt = Instant.now())
         return job
     }
 
@@ -121,7 +119,7 @@ class FakeDiffRepository : DiffRepository {
         artifacts: List<StorageService.ScannedArtifact>,
     ) {
         val current = runs[runId] ?: return
-        val now = Instant.now().toString()
+        val now = Instant.now()
         runs[runId] =
             current.copy(
                 status = RunStatus.SUCCEEDED.name,
@@ -136,8 +134,8 @@ class FakeDiffRepository : DiffRepository {
             artifacts
                 .map {
                     Artifact(
-                        id = UUID.randomUUID().toString(),
-                        runId = runId.toString(),
+                        id = UUID.randomUUID(),
+                        runId = runId,
                         kind = it.kind.name,
                         filename = it.filename,
                         contentType = it.contentType,
@@ -160,7 +158,7 @@ class FakeDiffRepository : DiffRepository {
         runs[runId] =
             current.copy(
                 status = RunStatus.FAILED.name,
-                finishedAt = Instant.now().toString(),
+                finishedAt = Instant.now(),
                 exitCode = exitCode,
                 stdout = stdoutText,
                 stderr = stderrText,
@@ -170,28 +168,22 @@ class FakeDiffRepository : DiffRepository {
 
     suspend fun enqueueRun(oldFilePath: String, newFilePath: String, outputDir: String): UUID {
         val project = createProject("test-project")
-        val projectId = UUID.fromString(project.id)
+        val projectId = project.id
 
         val oldAsset =
-            createAsset(
-                projectId,
-                StorageService.StoredFile("old.pdf", "application/pdf", 1, "old", oldFilePath),
-            )
+            createAsset(projectId, NewAsset("old.pdf", "application/pdf", 1, "old", oldFilePath))
         val newAsset =
-            createAsset(
-                projectId,
-                StorageService.StoredFile("new.pdf", "application/pdf", 1, "new", newFilePath),
-            )
+            createAsset(projectId, NewAsset("new.pdf", "application/pdf", 1, "new", newFilePath))
 
         val comparison =
             createComparison(
                 projectId = projectId,
-                oldAssetId = UUID.fromString(oldAsset.id),
-                newAssetId = UUID.fromString(newAsset.id),
+                oldAssetId = oldAsset.id,
+                newAssetId = newAsset.id,
             ) ?: error("comparison was not created")
 
         val runId = UUID.randomUUID()
-        createRun(runId, UUID.fromString(comparison.id), outputDir)
+        createRun(runId, comparison.id, outputDir)
         queuedRuns.addLast(
             QueuedRunWork(
                 runId = runId,

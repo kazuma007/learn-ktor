@@ -4,6 +4,7 @@ import com.visualdiffserver.domain.Artifact
 import com.visualdiffserver.domain.Asset
 import com.visualdiffserver.domain.Comparison
 import com.visualdiffserver.domain.DiffRepository
+import com.visualdiffserver.domain.NewAsset
 import com.visualdiffserver.domain.Project
 import com.visualdiffserver.domain.Run
 import com.visualdiffserver.routes.ApiException
@@ -41,7 +42,16 @@ class DiffService(private val repository: DiffRepository, private val storage: S
                 data = upload.data,
             )
         requireNonEmptyUpload(stored.byteSize)
-        return repository.createAsset(projectId, stored)
+        return repository.createAsset(
+            projectId,
+            NewAsset(
+                filename = stored.filename,
+                contentType = stored.contentType,
+                byteSize = stored.byteSize,
+                sha256 = stored.sha256,
+                storagePath = stored.storagePath,
+            ),
+        )
     }
 
     suspend fun getAsset(assetId: UUID): Asset {
