@@ -2,7 +2,7 @@ package com.visualdiffserver.worker
 
 import com.visualdiffserver.config.AppConfig
 import com.visualdiffserver.domain.ArtifactKind
-import com.visualdiffserver.persistence.DiffRepository
+import com.visualdiffserver.domain.RunQueueRepository
 import com.visualdiffserver.storage.StorageService
 import kotlin.io.path.Path as toPath
 import kotlinx.coroutines.CoroutineScope
@@ -18,7 +18,7 @@ class RunWorker(
     private val logger: Logger,
     private val config: AppConfig,
     private val storage: StorageService,
-    private val repository: DiffRepository,
+    private val repository: RunQueueRepository,
     private val visualDiffRunner: VisualDiffRunner,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

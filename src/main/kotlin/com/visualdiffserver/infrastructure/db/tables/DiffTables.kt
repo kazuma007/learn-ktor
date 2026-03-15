@@ -1,4 +1,4 @@
-package com.visualdiffserver.persistence
+package com.visualdiffserver.infrastructure.db.tables
 
 import org.jetbrains.exposed.sql.ReferenceOption
 import org.jetbrains.exposed.sql.Table

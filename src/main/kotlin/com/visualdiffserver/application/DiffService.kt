@@ -1,12 +1,13 @@
-package com.visualdiffserver.app
+package com.visualdiffserver.application
 
-import com.visualdiffserver.domain.ArtifactResponse
-import com.visualdiffserver.domain.AssetResponse
-import com.visualdiffserver.domain.ComparisonResponse
-import com.visualdiffserver.domain.ProjectResponse
-import com.visualdiffserver.domain.RunResponse
-import com.visualdiffserver.http.ApiException
-import com.visualdiffserver.persistence.DiffRepository
+import com.visualdiffserver.domain.Artifact
+import com.visualdiffserver.domain.Asset
+import com.visualdiffserver.domain.Comparison
+import com.visualdiffserver.domain.DiffRepository
+import com.visualdiffserver.domain.NewAsset
+import com.visualdiffserver.domain.Project
+import com.visualdiffserver.domain.Run
+import com.visualdiffserver.routes.ApiException
 import com.visualdiffserver.storage.StorageService
 import io.ktor.http.HttpStatusCode
 import java.io.InputStream
@@ -23,7 +24,7 @@ class DiffService(private val repository: DiffRepository, private val storage: S
 
     data class DownloadedFile(val filename: String, val path: Path)
 
-    suspend fun createProject(name: String): ProjectResponse {
+    suspend fun createProject(name: String): Project {
         val normalizedName = name.trim()
         if (normalizedName.isBlank()) {
             throw ApiException(HttpStatusCode.BadRequest, "name must not be blank")
@@ -31,7 +32,7 @@ class DiffService(private val repository: DiffRepository, private val storage: S
         return repository.createProject(normalizedName)
     }
 
-    suspend fun createAsset(projectId: UUID, upload: AssetUpload): AssetResponse {
+    suspend fun createAsset(projectId: UUID, upload: AssetUpload): Asset {
         ensureProjectExists(projectId)
 
         val stored =
@@ -41,10 +42,19 @@ class DiffService(private val repository: DiffRepository, private val storage: S
                 data = upload.data,
             )
         requireNonEmptyUpload(stored.byteSize)
-        return repository.createAsset(projectId, stored)
+        return repository.createAsset(
+            projectId,
+            NewAsset(
+                filename = stored.filename,
+                contentType = stored.contentType,
+                byteSize = stored.byteSize,
+                sha256 = stored.sha256,
+                storagePath = stored.storagePath,
+            ),
+        )
     }
 
-    suspend fun getAsset(assetId: UUID): AssetResponse {
+    suspend fun getAsset(assetId: UUID): Asset {
         return repository.getAsset(assetId)
             ?: throw ApiException(HttpStatusCode.NotFound, "asset not found")
     }
@@ -57,18 +67,14 @@ class DiffService(private val repository: DiffRepository, private val storage: S
         )
     }
 
-    suspend fun createComparison(
-        projectId: UUID,
-        oldAssetId: UUID,
-        newAssetId: UUID,
-    ): ComparisonResponse {
+    suspend fun createComparison(projectId: UUID, oldAssetId: UUID, newAssetId: UUID): Comparison {
         ensureProjectExists(projectId)
 
         return repository.createComparison(projectId, oldAssetId, newAssetId)
             ?: throw ApiException(HttpStatusCode.BadRequest, "assets must belong to project")
     }
 
-    suspend fun createRun(comparisonId: UUID): RunResponse {
+    suspend fun createRun(comparisonId: UUID): Run {
         repository.getComparison(comparisonId)
             ?: throw ApiException(HttpStatusCode.NotFound, "comparison not found")
 
@@ -77,12 +83,12 @@ class DiffService(private val repository: DiffRepository, private val storage: S
         return repository.createRun(runId, comparisonId, outputDir)
     }
 
-    suspend fun getRun(runId: UUID): RunResponse {
+    suspend fun getRun(runId: UUID): Run {
         return repository.getRun(runId)
             ?: throw ApiException(HttpStatusCode.NotFound, "run not found")
     }
 
-    suspend fun listArtifacts(runId: UUID): List<ArtifactResponse> {
+    suspend fun listArtifacts(runId: UUID): List<Artifact> {
         getRun(runId)
         return repository.listArtifacts(runId)
     }

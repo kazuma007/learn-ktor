@@ -1,8 +1,9 @@
-package com.visualdiffserver.http
+package com.visualdiffserver.routes
 
-import com.visualdiffserver.app.DiffService
-import com.visualdiffserver.domain.CreateComparisonRequest
-import com.visualdiffserver.domain.CreateProjectRequest
+import com.visualdiffserver.api.request.CreateComparisonRequest
+import com.visualdiffserver.api.request.CreateProjectRequest
+import com.visualdiffserver.api.response.toResponse
+import com.visualdiffserver.application.DiffService
 import io.ktor.http.ContentDisposition
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -16,7 +17,7 @@ import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import org.koin.ktor.ext.inject
 
-fun Application.configureRouting() {
+fun Application.configureApiRoutes() {
     val diffService by inject<DiffService>()
 
     routing {
@@ -24,19 +25,19 @@ fun Application.configureRouting() {
             post("/projects") {
                 val request = call.receive<CreateProjectRequest>()
                 val response = diffService.createProject(request.name)
-                call.respond(HttpStatusCode.Created, response)
+                call.respond(HttpStatusCode.Created, response.toResponse())
             }
 
             post("/projects/{projectId}/assets") {
                 val projectId = call.requireUuidPathParam("projectId")
                 val upload = call.receiveAssetUpload()
                 val response = diffService.createAsset(projectId, upload)
-                call.respond(HttpStatusCode.Created, response)
+                call.respond(HttpStatusCode.Created, response.toResponse())
             }
 
             get("/assets/{assetId}") {
                 val assetId = call.requireUuidPathParam("assetId")
-                call.respond(diffService.getAsset(assetId))
+                call.respond(diffService.getAsset(assetId).toResponse())
             }
 
             get("/assets/{assetId}/download") {
@@ -65,23 +66,23 @@ fun Application.configureRouting() {
                         ?: throw ApiException(HttpStatusCode.BadRequest, "newAssetId must be UUID")
 
                 val comparison = diffService.createComparison(projectId, oldAssetId, newAssetId)
-                call.respond(HttpStatusCode.Created, comparison)
+                call.respond(HttpStatusCode.Created, comparison.toResponse())
             }
 
             post("/comparisons/{comparisonId}/runs") {
                 val comparisonId = call.requireUuidPathParam("comparisonId")
                 val run = diffService.createRun(comparisonId)
-                call.respond(HttpStatusCode.Created, run)
+                call.respond(HttpStatusCode.Created, run.toResponse())
             }
 
             get("/runs/{runId}") {
                 val runId = call.requireUuidPathParam("runId")
-                call.respond(diffService.getRun(runId))
+                call.respond(diffService.getRun(runId).toResponse())
             }
 
             get("/runs/{runId}/artifacts") {
                 val runId = call.requireUuidPathParam("runId")
-                call.respond(diffService.listArtifacts(runId))
+                call.respond(diffService.listArtifacts(runId).map { it.toResponse() })
             }
 
             get("/runs/{runId}/artifacts/{artifactId}") {

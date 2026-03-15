@@ -1,12 +1,12 @@
 package com.visualdiffserver
 
-import com.visualdiffserver.app.productionModule
+import com.visualdiffserver.application.productionModule
 import com.visualdiffserver.config.AppConfig
-import com.visualdiffserver.http.configureRouting
-import com.visualdiffserver.http.plugins.configureSerialization
-import com.visualdiffserver.http.plugins.configureStatusPages
-import com.visualdiffserver.persistence.DatabaseFactory
-import com.visualdiffserver.persistence.DiffRepository
+import com.visualdiffserver.domain.RunQueueRepository
+import com.visualdiffserver.plugins.configureDatabase
+import com.visualdiffserver.plugins.configureRouting
+import com.visualdiffserver.plugins.configureSerialization
+import com.visualdiffserver.plugins.configureStatusPages
 import com.visualdiffserver.storage.StorageService
 import com.visualdiffserver.worker.RunWorker
 import com.visualdiffserver.worker.VisualDiffRunner
@@ -34,16 +34,15 @@ fun Application.module(
 
     configureSerialization()
     configureStatusPages()
+    if (initializeDatabase) {
+        configureDatabase()
+    }
     configureRouting()
 
     val config by inject<AppConfig>()
     val storage by inject<StorageService>()
-    val repository by inject<DiffRepository>()
+    val repository by inject<RunQueueRepository>()
     val visualDiffRunner by inject<VisualDiffRunner>()
-
-    if (initializeDatabase) {
-        DatabaseFactory.init(config)
-    }
 
     val worker =
         RunWorker(
