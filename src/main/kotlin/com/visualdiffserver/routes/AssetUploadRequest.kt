@@ -1,6 +1,6 @@
-package com.visualdiffserver.http
+package com.visualdiffserver.routes
 
-import com.visualdiffserver.app.DiffService
+import com.visualdiffserver.application.DiffService
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.PartData
 import io.ktor.server.application.ApplicationCall

@@ -1,9 +1,9 @@
-package com.visualdiffserver.http
+package com.visualdiffserver.routes
 
-import com.visualdiffserver.app.DiffService
+import com.visualdiffserver.application.DiffService
 import com.visualdiffserver.config.AppConfig
+import com.visualdiffserver.domain.DiffRepository
 import com.visualdiffserver.module as appModule
-import com.visualdiffserver.persistence.DiffRepository
 import com.visualdiffserver.storage.StorageService
 import com.visualdiffserver.support.FakeDiffRepository
 import com.visualdiffserver.worker.CommandResult
@@ -32,43 +32,53 @@ class AssetUploadRequestTest {
         val testModule = testModule()
         application { appModule(initializeDatabase = false, rootModule = testModule) }
 
-        val projectResponse = client.post("/api/projects") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"name":"asset-demo"}""")
-        }
+        val projectResponse =
+            client.post("/api/projects") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"name":"asset-demo"}""")
+            }
         val projectId = extractField(projectResponse.bodyAsText(), "id")
 
-        val response = client.post("/api/projects/$projectId/assets") {
-            setBody(
-                MultiPartFormDataContent(
-                    formData {
-                        append(
-                            key = "file",
-                            value = ByteArray(0),
-                            headers = Headers.build {
-                                append(HttpHeaders.ContentType, ContentType.Application.Pdf.toString())
-                                append(HttpHeaders.ContentDisposition, "filename=\"empty.pdf\"")
-                            },
-                        )
-                    },
-                ),
-            )
-        }
+        val response =
+            client.post("/api/projects/$projectId/assets") {
+                setBody(
+                    MultiPartFormDataContent(
+                        formData {
+                            append(
+                                key = "file",
+                                value = ByteArray(0),
+                                headers =
+                                    Headers.build {
+                                        append(
+                                            HttpHeaders.ContentType,
+                                            ContentType.Application.Pdf.toString(),
+                                        )
+                                        append(
+                                            HttpHeaders.ContentDisposition,
+                                            "filename=\"empty.pdf\"",
+                                        )
+                                    },
+                            )
+                        }
+                    )
+                )
+            }
 
         assertEquals(HttpStatusCode.BadRequest, response.status)
         assertEquals("""{"error":"uploaded file must not be empty"}""", response.bodyAsText())
     }
 
     private fun testModule(): Module {
-        val config = AppConfig(
-            dbUrl = "jdbc:postgresql://unused",
-            dbUser = "unused",
-            dbPassword = "unused",
-            dataDir = createTempDirectory("api-test-data"),
-            assetsDir = createTempDirectory("api-test-assets"),
-            runsDir = createTempDirectory("api-test-runs"),
-            visualDiffCmd = "echo",
-        )
+        val config =
+            AppConfig(
+                dbUrl = "jdbc:postgresql://unused",
+                dbUser = "unused",
+                dbPassword = "unused",
+                dataDir = createTempDirectory("api-test-data"),
+                assetsDir = createTempDirectory("api-test-assets"),
+                runsDir = createTempDirectory("api-test-runs"),
+                visualDiffCmd = "echo",
+            )
         return module {
             single { config }
             single { StorageService(get()) }
@@ -76,7 +86,12 @@ class AssetUploadRequestTest {
             single { DiffService(get(), get()) }
             single<VisualDiffRunner> {
                 object : VisualDiffRunner {
-                    override fun run(baseCommand: String, oldFile: String, newFile: String, outputDir: Path): CommandResult {
+                    override fun run(
+                        baseCommand: String,
+                        oldFile: String,
+                        newFile: String,
+                        outputDir: Path,
+                    ): CommandResult {
                         return CommandResult(exitCode = 0, stdout = "", stderr = "")
                     }
                 }
@@ -86,7 +101,6 @@ class AssetUploadRequestTest {
 
     private fun extractField(json: String, field: String): String {
         val pattern = Regex("\"$field\":\"([^\"]+)\"")
-        return pattern.find(json)?.groupValues?.get(1)
-            ?: error("field '$field' not found in $json")
+        return pattern.find(json)?.groupValues?.get(1) ?: error("field '$field' not found in $json")
     }
 }

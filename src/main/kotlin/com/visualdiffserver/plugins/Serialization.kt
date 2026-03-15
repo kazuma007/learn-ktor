@@ -1,4 +1,4 @@
-package com.visualdiffserver.http.plugins
+package com.visualdiffserver.plugins
 
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application

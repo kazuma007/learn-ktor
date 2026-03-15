@@ -1,4 +1,4 @@
-package com.visualdiffserver.http
+package com.visualdiffserver.routes
 
 import io.ktor.http.HttpStatusCode
 

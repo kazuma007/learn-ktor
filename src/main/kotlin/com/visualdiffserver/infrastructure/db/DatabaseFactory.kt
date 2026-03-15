@@ -1,6 +1,11 @@
-package com.visualdiffserver.persistence
+package com.visualdiffserver.infrastructure.db
 
 import com.visualdiffserver.config.AppConfig
+import com.visualdiffserver.infrastructure.db.tables.ArtifactsTable
+import com.visualdiffserver.infrastructure.db.tables.AssetsTable
+import com.visualdiffserver.infrastructure.db.tables.ComparisonsTable
+import com.visualdiffserver.infrastructure.db.tables.ProjectsTable
+import com.visualdiffserver.infrastructure.db.tables.RunsTable
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils

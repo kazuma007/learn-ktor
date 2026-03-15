@@ -1,18 +1,18 @@
-package com.visualdiffserver.http
+package com.visualdiffserver.routes
 
-import com.visualdiffserver.app.DiffService
+import com.visualdiffserver.application.DiffService
 import com.visualdiffserver.config.AppConfig
+import com.visualdiffserver.domain.DiffRepository
 import com.visualdiffserver.module as appModule
-import com.visualdiffserver.persistence.DiffRepository
-import com.visualdiffserver.support.FakeDiffRepository
 import com.visualdiffserver.storage.StorageService
+import com.visualdiffserver.support.FakeDiffRepository
 import com.visualdiffserver.worker.CommandResult
 import com.visualdiffserver.worker.VisualDiffRunner
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.client.request.forms.MultiPartFormDataContent
-import io.ktor.client.request.forms.formData
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.Headers
@@ -33,10 +33,11 @@ class ApiRoutesTest {
         val testModule = testModule()
         application { appModule(initializeDatabase = false, rootModule = testModule) }
 
-        val response = client.post("/api/projects") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"name":"demo"}""")
-        }
+        val response =
+            client.post("/api/projects") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"name":"demo"}""")
+            }
 
         assertEquals(HttpStatusCode.Created, response.status)
         assertTrue(response.bodyAsText().contains("\"name\":\"demo\""))
@@ -47,28 +48,37 @@ class ApiRoutesTest {
         val testModule = testModule()
         application { appModule(initializeDatabase = false, rootModule = testModule) }
 
-        val projectResponse = client.post("/api/projects") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"name":"asset-demo"}""")
-        }
+        val projectResponse =
+            client.post("/api/projects") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"name":"asset-demo"}""")
+            }
         val projectId = extractField(projectResponse.bodyAsText(), "id")
 
-        val uploadResponse = client.post("/api/projects/$projectId/assets") {
-            setBody(
-                MultiPartFormDataContent(
-                    formData {
-                        append(
-                            key = "file",
-                            value = "hello-pdf".encodeToByteArray(),
-                            headers = Headers.build {
-                                append(HttpHeaders.ContentType, ContentType.Application.Pdf.toString())
-                                append(HttpHeaders.ContentDisposition, "filename=\"sample.pdf\"")
-                            },
-                        )
-                    },
-                ),
-            )
-        }
+        val uploadResponse =
+            client.post("/api/projects/$projectId/assets") {
+                setBody(
+                    MultiPartFormDataContent(
+                        formData {
+                            append(
+                                key = "file",
+                                value = "hello-pdf".encodeToByteArray(),
+                                headers =
+                                    Headers.build {
+                                        append(
+                                            HttpHeaders.ContentType,
+                                            ContentType.Application.Pdf.toString(),
+                                        )
+                                        append(
+                                            HttpHeaders.ContentDisposition,
+                                            "filename=\"sample.pdf\"",
+                                        )
+                                    },
+                            )
+                        }
+                    )
+                )
+            }
 
         assertEquals(HttpStatusCode.Created, uploadResponse.status)
         val assetId = extractField(uploadResponse.bodyAsText(), "id")
@@ -87,10 +97,11 @@ class ApiRoutesTest {
         val testModule = testModule()
         application { appModule(initializeDatabase = false, rootModule = testModule) }
 
-        val response = client.post("/api/projects") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"name":"   "}""")
-        }
+        val response =
+            client.post("/api/projects") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"name":"   "}""")
+            }
 
         assertEquals(HttpStatusCode.BadRequest, response.status)
         assertEquals("""{"error":"name must not be blank"}""", response.bodyAsText())
@@ -101,15 +112,17 @@ class ApiRoutesTest {
         val testModule = testModule()
         application { appModule(initializeDatabase = false, rootModule = testModule) }
 
-        val projectResponse = client.post("/api/projects") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"name":"asset-demo"}""")
-        }
+        val projectResponse =
+            client.post("/api/projects") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"name":"asset-demo"}""")
+            }
         val projectId = extractField(projectResponse.bodyAsText(), "id")
 
-        val response = client.post("/api/projects/$projectId/assets") {
-            setBody(MultiPartFormDataContent(formData { }))
-        }
+        val response =
+            client.post("/api/projects/$projectId/assets") {
+                setBody(MultiPartFormDataContent(formData {}))
+            }
 
         assertEquals(HttpStatusCode.BadRequest, response.status)
         assertEquals("""{"error":"file part is required"}""", response.bodyAsText())
@@ -131,16 +144,20 @@ class ApiRoutesTest {
         val testModule = testModule()
         application { appModule(initializeDatabase = false, rootModule = testModule) }
 
-        val projectResponse = client.post("/api/projects") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"name":"comparison-demo"}""")
-        }
+        val projectResponse =
+            client.post("/api/projects") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"name":"comparison-demo"}""")
+            }
         val projectId = extractField(projectResponse.bodyAsText(), "id")
 
-        val response = client.post("/api/projects/$projectId/comparisons") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"oldAssetId":"not-a-uuid","newAssetId":"123e4567-e89b-12d3-a456-426614174000"}""")
-        }
+        val response =
+            client.post("/api/projects/$projectId/comparisons") {
+                contentType(ContentType.Application.Json)
+                setBody(
+                    """{"oldAssetId":"not-a-uuid","newAssetId":"123e4567-e89b-12d3-a456-426614174000"}"""
+                )
+            }
 
         assertEquals(HttpStatusCode.BadRequest, response.status)
         assertEquals("""{"error":"oldAssetId must be UUID"}""", response.bodyAsText())
@@ -180,15 +197,16 @@ class ApiRoutesTest {
     }
 
     private fun testModule(): Module {
-        val config = AppConfig(
-            dbUrl = "jdbc:postgresql://unused",
-            dbUser = "unused",
-            dbPassword = "unused",
-            dataDir = createTempDirectory("api-test-data"),
-            assetsDir = createTempDirectory("api-test-assets"),
-            runsDir = createTempDirectory("api-test-runs"),
-            visualDiffCmd = "echo",
-        )
+        val config =
+            AppConfig(
+                dbUrl = "jdbc:postgresql://unused",
+                dbUser = "unused",
+                dbPassword = "unused",
+                dataDir = createTempDirectory("api-test-data"),
+                assetsDir = createTempDirectory("api-test-assets"),
+                runsDir = createTempDirectory("api-test-runs"),
+                visualDiffCmd = "echo",
+            )
         return module {
             single { config }
             single { StorageService(get()) }
@@ -196,7 +214,12 @@ class ApiRoutesTest {
             single { DiffService(get(), get()) }
             single<VisualDiffRunner> {
                 object : VisualDiffRunner {
-                    override fun run(baseCommand: String, oldFile: String, newFile: String, outputDir: java.nio.file.Path): CommandResult {
+                    override fun run(
+                        baseCommand: String,
+                        oldFile: String,
+                        newFile: String,
+                        outputDir: java.nio.file.Path,
+                    ): CommandResult {
                         return CommandResult(exitCode = 0, stdout = "", stderr = "")
                     }
                 }
@@ -206,7 +229,6 @@ class ApiRoutesTest {
 
     private fun extractField(json: String, field: String): String {
         val pattern = Regex("\"$field\":\"([^\"]+)\"")
-        return pattern.find(json)?.groupValues?.get(1)
-            ?: error("field '$field' not found in $json")
+        return pattern.find(json)?.groupValues?.get(1) ?: error("field '$field' not found in $json")
     }
 }

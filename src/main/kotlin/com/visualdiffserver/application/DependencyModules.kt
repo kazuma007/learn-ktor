@@ -1,8 +1,8 @@
-package com.visualdiffserver.app
+package com.visualdiffserver.application
 
 import com.visualdiffserver.config.AppConfig
-import com.visualdiffserver.persistence.DiffRepository
-import com.visualdiffserver.persistence.ExposedDiffRepository
+import com.visualdiffserver.domain.DiffRepository
+import com.visualdiffserver.infrastructure.db.repository.ExposedDiffRepository
 import com.visualdiffserver.storage.StorageService
 import com.visualdiffserver.worker.ShellVisualDiffRunner
 import com.visualdiffserver.worker.VisualDiffRunner

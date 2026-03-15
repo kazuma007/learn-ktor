@@ -2,7 +2,7 @@ package com.visualdiffserver.worker
 
 import com.visualdiffserver.config.AppConfig
 import com.visualdiffserver.domain.ArtifactKind
-import com.visualdiffserver.persistence.DiffRepository
+import com.visualdiffserver.domain.DiffRepository
 import com.visualdiffserver.storage.StorageService
 import kotlin.io.path.Path as toPath
 import kotlinx.coroutines.CoroutineScope

@@ -1,4 +1,4 @@
-package com.visualdiffserver.domain
+package com.visualdiffserver.api.request
 
 import kotlinx.serialization.Serializable
 

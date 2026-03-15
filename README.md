@@ -1,60 +1,77 @@
 # Diff as a Service
 
-A Kotlin/Ktor API to manage image comparison runs and serve generated artifacts.
+A Kotlin/Ktor API that manages PDF comparison runs and serves generated artifacts.
 
 The service lets you:
+
 - create projects
-- upload source assets (PDFs)
+- upload source assets
 - create comparisons between two assets
 - queue runs
 - execute `visualdiff` in a background worker
-- access run status and generated artifacts (`report.html`, `diff.json`, images)
+- inspect run status
+- download generated artifacts such as `report.html`, `diff.json`, and images
 
 ## Tech stack
 
 - Kotlin `2.3.10`
 - Ktor `3.4.0`
+- Koin
 - Exposed + PostgreSQL
 - Docker / Docker Compose
 
 ## Visual Diff JAR source
 
 This repository includes `visualdiff/visualdiff.jar` for local and container execution.
-The JAR comes from https://github.com/kazuma007/visual-diff/tree/main
+The JAR comes from:
+
+- https://github.com/kazuma007/visual-diff/tree/main
 
 ## Prerequisites
 
 - Docker + Docker Compose, or
-- JDK 21 + PostgreSQL (if running outside Docker)
+- JDK 21 + PostgreSQL
 
 ## Environment variables
 
 - `DB_URL`
 - `DB_USER`
 - `DB_PASSWORD`
-- `DATA_DIR` (default for local runs: `./data`; Docker Compose sets `/data`)
-- `VISUAL_DIFF_CMD` (default for local runs: `java -jar ./visualdiff/visualdiff.jar`; Docker Compose sets `/app/visualdiff/visualdiff.jar`)
-- `PORT` (default: `8080`)
+- `DATA_DIR`
+- `VISUAL_DIFF_CMD`
+- `PORT`
+
+Defaults used by the app:
+
+- `DATA_DIR=./data` for local runs
+- `DATA_DIR=/data` in containers
+- `VISUAL_DIFF_CMD=java -jar ./visualdiff/visualdiff.jar` for local runs
+- `VISUAL_DIFF_CMD=java -jar /app/visualdiff/visualdiff.jar` in containers
+- `PORT=8080`
 
 ## Build
 
-From repository root:
+Build and test the project:
 
 ```bash
 ./gradlew clean build
 ```
 
-Build fat jar:
+Build a fat jar:
 
 ```bash
-./gradlew clean buildFatJar
+./gradlew buildFatJar
+```
+
+Build a shadow jar directly:
+
+```bash
+./gradlew shadowJar
 ```
 
 ## Run
 
-### Option 1: Docker Compose (recommended)
-
-From repository root:
+### Option 1: Docker Compose
 
 ```bash
 docker compose up --build
@@ -68,83 +85,97 @@ http://localhost:8080/api
 
 ### Option 2: Local Gradle run
 
-1) Start PostgreSQL and set env vars.
-2) Run API from repository root:
+Start PostgreSQL, export the required environment variables, then run:
 
 ```bash
 ./gradlew run
 ```
 
-## Test
+### Option 3: Run the fat jar
 
-Run unit/integration tests:
+```bash
+./gradlew runFatJar
+```
+
+## Test and format
+
+Run tests:
 
 ```bash
 ./gradlew test
 ```
 
-## Format
-
-Format Kotlin and Gradle Kotlin script sources:
-
-```bash
-./gradlew ktfmtFormat
-```
-
-Verify formatting without changing files:
-
-```bash
-./gradlew ktfmtCheck
-```
-
-The standard verification task also includes formatting checks:
+Run all checks:
 
 ```bash
 ./gradlew check
 ```
 
-Run full API curl scenario and save outputs:
+Format sources:
+
+```bash
+./gradlew ktfmtFormat
+```
+
+Verify formatting only:
+
+```bash
+./gradlew ktfmtCheck
+```
+
+Run the end-to-end helper script and save outputs:
 
 ```bash
 ./scripts/e2e-save-output.sh
 ```
 
 Notes:
-- Requires `jq` (used for reliable JSON parsing).
-- Downloads `report.html` plus all registered artifacts into the output directory, preserving original filenames.
 
-Saved artifacts:
+- `jq` is required by the script.
+- The script downloads `report.html` and all registered artifacts into a timestamped output directory.
+
+Saved outputs:
 
 ```text
 outputs/e2e-YYYYMMDD-HHMMSS/
 ```
 
-## Repository layout
+## Project structure
+
+The code is organized by responsibility:
 
 ```text
-.
-|-- src/main/kotlin/com/visualdiffserver
-|   |-- app/          # service wiring
-|   |-- config/       # environment and path resolution
-|   |-- domain/       # API DTOs and enums
-|   |-- http/         # routes, request parsing, error handling
-|   |-- persistence/  # Exposed repository and schema
-|   |-- storage/      # filesystem operations
-|   `-- worker/       # background run processing
-|-- src/test/kotlin/com/visualdiffserver
-|   |-- app/
-|   |-- config/
-|   |-- http/
-|   |-- support/
-|   `-- worker/
-|-- visualdiff/
-|-- example/
-`-- scripts/
+src/main/kotlin/com/visualdiffserver
+├─ plugins/              # Ktor setup: routing, serialization, status pages, DB init
+├─ routes/               # HTTP endpoints, request parsing, path params, API exceptions
+├─ application/          # use cases and service orchestration
+├─ domain/               # domain models, repository abstraction, enums
+├─ infrastructure/
+│  └─ db/
+│     ├─ tables/         # Exposed table definitions
+│     ├─ repository/     # Exposed repository implementation
+│     └─ mapper/         # ResultRow -> domain model mapping
+├─ api/
+│  ├─ request/           # HTTP request DTOs
+│  └─ response/          # HTTP response DTOs and API mappers
+├─ config/               # typed application config
+├─ storage/              # filesystem storage helpers
+├─ worker/               # background run processing
+└─ Application.kt        # application entrypoint and wiring
 ```
+
+Layering rules:
+
+- `routes`: HTTP only
+- `application`: use cases
+- `domain`: framework-independent core types and abstractions
+- `infrastructure`: database implementation details
+- `api`: external request/response contract
+- `plugins`: Ktor initialization
 
 ## Runtime storage layout
 
-With `DATA_DIR=/data`:
+With `DATA_DIR=./data` or `DATA_DIR=/data`, files are stored like this:
 
 ```text
 data/
@@ -154,6 +185,8 @@ data/
       report.html
       diff.json
       *.png|*.jpg|*.jpeg|*.webp|*.gif
+      *.css
+      *.js
 ```
 
 ## API endpoints
@@ -169,13 +202,15 @@ data/
 - `GET /api/runs/{runId}/artifacts/{artifactId}`
 - `GET /api/runs/{runId}/report`
 
-## Example API flow (curl)
+## Example API flow
+
+Set the base URL:
 
 ```bash
 BASE=http://localhost:8080/api
 ```
 
-1. Create project
+Create a project:
 
 ```bash
 curl -s -X POST "$BASE/projects" \
@@ -183,21 +218,21 @@ curl -s -X POST "$BASE/projects" \
   -d '{"name":"demo"}'
 ```
 
-2. Upload old asset
+Upload the first asset:
 
 ```bash
 curl -s -X POST "$BASE/projects/$PROJECT_ID/assets" \
   -F 'file=@./example/A.pdf'
 ```
 
-3. Upload new asset
+Upload the second asset:
 
 ```bash
 curl -s -X POST "$BASE/projects/$PROJECT_ID/assets" \
   -F 'file=@./example/B.pdf'
 ```
 
-4. Create comparison
+Create a comparison:
 
 ```bash
 curl -s -X POST "$BASE/projects/$PROJECT_ID/comparisons" \
@@ -205,20 +240,32 @@ curl -s -X POST "$BASE/projects/$PROJECT_ID/comparisons" \
   -d "{\"oldAssetId\":\"$OLD_ASSET_ID\",\"newAssetId\":\"$NEW_ASSET_ID\"}"
 ```
 
-5. Queue run
+Queue a run:
 
 ```bash
 curl -s -X POST "$BASE/comparisons/$COMPARISON_ID/runs"
 ```
 
-6. Check run
+Check run status:
 
 ```bash
 curl -s "$BASE/runs/$RUN_ID"
 ```
 
-7. Download report
+List run artifacts:
+
+```bash
+curl -s "$BASE/runs/$RUN_ID/artifacts"
+```
+
+Download the HTML report:
 
 ```bash
 curl -s "$BASE/runs/$RUN_ID/report" -o report.html
 ```
+
+## Configuration notes
+
+- The Ktor module entrypoint is `com.visualdiffserver.ApplicationKt.module`.
+- Database schema creation is handled on startup through Exposed.
+- The background worker starts with the application and polls for queued runs.
